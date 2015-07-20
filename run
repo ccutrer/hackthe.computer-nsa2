@@ -1,5 +1,49 @@
-#!/usr/bin/python
+#!/usr/bin/env ruby
 
 # To solve this problem, make the './run' executable handle any 
 # appropriate command line arguments and stdin and output the
 # solution to stdout.
+
+group_size = ARGV[0].split('=').last.to_i
+
+require 'json'
+require 'set'
+
+all_friends = JSON.load(STDIN.read)
+
+friendships = {}
+
+all_friends.each do |friendship|
+  friendships[friendship.first] ||= Set.new
+  friendships[friendship.first] << friendship.last
+  friendships[friendship.last] ||= Set.new
+  friendships[friendship.last] << friendship.first
+end
+
+groups = []
+
+
+friendships.each do |person, friends|
+  friends.each do |friend|
+    # look for groups with this friend in it already
+    old_groups = groups.select { |g| g.include?(friend) }
+    # try to add to each of these groups
+    old_groups.each do |old_group|
+      next unless old_group.all? { |member| friendships[member].include?(person) }
+      old_group << person
+    end
+    # start a new group
+    new_group = Set.new
+    new_group << person
+    new_group << friend
+    groups << new_group
+  end
+end
+
+valid_groups = groups.uniq.map do |group|
+  next unless group.length >= group_size
+  group.to_a
+end.compact
+
+puts valid_groups.inspect
+
