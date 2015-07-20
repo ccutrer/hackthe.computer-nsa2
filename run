@@ -22,28 +22,36 @@ end
 
 groups = []
 
+people = friendships.keys
 
-friendships.each do |person, friends|
-  friends.each do |friend|
-    # look for groups with this friend in it already
-    old_groups = groups.select { |g| g.include?(friend) }
-    # try to add to each of these groups
-    old_groups.each do |old_group|
-      next unless old_group.all? { |member| friendships[member].include?(person) }
-      old_group << person
-    end
-    # start a new group
-    new_group = Set.new
-    new_group << person
-    new_group << friend
-    groups << new_group
+(0..(2**people.length)).each do |i|
+  members_mask = "%0#{people.length}b" % i
+  count = 0
+  members_mask.each_char do |x|
+    count += 1 if x == '1'
   end
+  next unless count >= group_size
+
+  group = []
+  members_mask.each_char.each_with_index do |val, i|
+    next unless val == '1'
+    group << people[i]
+  end
+
+  valid = true
+  group.each_with_index do |member, i|
+    group.each_with_index do |friend, j|
+      next if j <= i
+      unless friendships[member].include?(friend)
+        valid = false
+        break
+      end
+    end
+    break unless valid
+  end
+
+  groups << group if valid
 end
 
-valid_groups = groups.uniq.map do |group|
-  next unless group.length >= group_size
-  group.to_a
-end.compact
-
-puts valid_groups.inspect
+puts groups.inspect
 
