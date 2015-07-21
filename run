@@ -26,10 +26,11 @@ people = friendships.keys
 
 all_friends.each do |friendship|
   group = friendship.to_set
+  next if groups.any? { |group| group.include?(friendship.first) && group.include?(friendship.last) }
   people.each do |person|
     group << person if group.all? { |p| friendships[p].include?(person) }
   end
   groups << group if group.size >= group_size
 end
 
-puts groups.uniq.map(&:to_a).inspect
+puts groups.map(&:to_a).inspect
