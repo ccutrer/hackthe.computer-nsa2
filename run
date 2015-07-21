@@ -21,7 +21,7 @@ all_friends.each do |friendship|
 end
 
 groups = []
-
+#
 people = friendships.keys
 
 (0..(2**people.length)).each do |i|
