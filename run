@@ -21,37 +21,22 @@ all_friends.each do |friendship|
 end
 
 groups = []
-#
+
 people = friendships.keys
+people.each_with_index do |person, i|
+  people.each_with_index do |person2, j|
+    next if j <= i
+    next unless friendships[person].include?(person2)
+    group = Set.new
+    group << person
+    group << person2
 
-(0..(2**people.length)).each do |i|
-  members_mask = "%0#{people.length}b" % i
-  count = 0
-  members_mask.each_char do |x|
-    count += 1 if x == '1'
-  end
-  next unless count >= group_size
-
-  group = []
-  members_mask.each_char.each_with_index do |val, i|
-    next unless val == '1'
-    group << people[i]
-  end
-
-  valid = true
-  group.each_with_index do |member, i|
-    group.each_with_index do |friend, j|
-      next if j <= i
-      unless friendships[member].include?(friend)
-        valid = false
-        break
-      end
+    people.each_with_index do |person3, k|
+      next if k <= j
+      group << person3 if group.all? { |p| friendships[p].include?(person3) }
     end
-    break unless valid
+    groups << group.to_a if group.size >= group_size
   end
-
-  groups << group if valid
 end
 
 puts groups.inspect
-
