@@ -23,20 +23,13 @@ end
 groups = []
 
 people = friendships.keys
-people.each_with_index do |person, i|
-  people.each_with_index do |person2, j|
-    next if j <= i
-    next unless friendships[person].include?(person2)
-    group = Set.new
-    group << person
-    group << person2
 
-    people.each_with_index do |person3, k|
-      next if k <= j
-      group << person3 if group.all? { |p| friendships[p].include?(person3) }
-    end
-    groups << group.to_a if group.size >= group_size
+all_friends.each do |friendship|
+  group = friendship.to_set
+  people.each do |person|
+    group << person if group.all? { |p| friendships[p].include?(person) }
   end
+  groups << group if group.size >= group_size
 end
 
-puts groups.inspect
+puts groups.uniq.map(&:to_a).inspect
