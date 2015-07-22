@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'byebug'
-
 $group_size = ARGV[0].split('=').last.to_i
 
 require 'json'
