@@ -1,10 +1,8 @@
 #!/usr/bin/env ruby
 
-# To solve this problem, make the './run' executable handle any 
-# appropriate command line arguments and stdin and output the
-# solution to stdout.
+require 'byebug'
 
-group_size = ARGV[0].split('=').last.to_i
+$group_size = ARGV[0].split('=').last.to_i
 
 require 'json'
 require 'set'
@@ -14,23 +12,71 @@ all_friends = JSON.load(STDIN.read)
 friendships = {}
 
 all_friends.each do |friendship|
-  friendships[friendship.first] ||= Set.new
+  friendships[friendship.first] ||= []
   friendships[friendship.first] << friendship.last
-  friendships[friendship.last] ||= Set.new
+  friendships[friendship.last] ||= []
   friendships[friendship.last] << friendship.first
 end
 
-groups = []
+friendships.each_value(&:uniq!)
 
-people = friendships.keys
+$sparse = friendships
+$degen = []
+$sets = []
 
-all_friends.each do |friendship|
-  group = friendship.to_set
-  next if groups.any? { |group| group.include?(friendship.first) && group.include?(friendship.last) }
-  people.each do |person|
-    group << person if group.all? { |p| friendships[p].include?(person) }
+def generate_degeneracy_ordering
+  d = []  #degree buckets
+  dw = {} #degree for each vertex
+  $sparse.each_pair do |vertex, neighbors|
+    deg = neighbors.size
+    d[deg] ||= []
+    d[deg].push vertex
+    dw[vertex] = deg
   end
-  groups << group if group.size >= group_size
+  d.each_index {|i| d[i] ||= []}
+  $sparse.size.times do
+    vertex = d.find {|x| !x.empty?}.pop
+    $degen.push vertex
+    for neighbor in $sparse[vertex]
+      if d[dw[neighbor]].delete neighbor
+        dw[neighbor] -= 1
+        d[dw[neighbor]].push neighbor
+      end
+    end
+  end
 end
 
-puts groups.map(&:to_a).inspect
+def bron_kerbosch(set, points, exclude, pivot_neighbors=nil)
+  if points.empty?
+    $sets.push set if set.size >= $group_size and exclude.empty?
+    return
+  end
+
+  pivot_neighbors ||= (exclude.empty? or $sparse[points.last].size > $sparse[exclude.last].size) ?
+      $sparse[points.last] : $sparse[exclude.last]
+
+  points.each_with_index do |vertex, i|
+    next if pivot_neighbors.include? vertex
+    points[i] = nil
+    bron_kerbosch(set + [vertex],
+                  points & $sparse[vertex],
+                  exclude & $sparse[vertex])
+    exclude.push vertex
+  end
+end
+
+
+generate_degeneracy_ordering
+before = []
+after = $degen[1..$degen.size-1]
+$degen.each do |vertex|
+  intersect = after & $sparse[vertex]
+  bron_kerbosch([vertex],
+                intersect,
+                before & $sparse[vertex],
+                $sparse[intersect.last]) #last elements in $degen have highest degrees
+  before.push vertex
+  after.shift
+end
+
+puts $sets.inspect
