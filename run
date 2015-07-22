@@ -36,6 +36,7 @@ end
 
 removed = []
 $follows.reject! do |p, followees|
+  # if you don't transitively follow yourself, you obviously can't be a member of any group
   if !followees.include?(p)
     removed << p
     true
@@ -47,6 +48,16 @@ end
 $follows.each do |p, followees|
   followees -= removed
 end
+
+# don't follow me back? not in my group!
+$follows.each do |p, followees|
+  followees.reject! do |f|
+    !$follows[f] || !$follows[f].include?(p)
+  end
+end
+
+#require 'byebug'
+#debugger
 
 groups = $follows.values.uniq
 puts groups.map(&:to_a).to_json
