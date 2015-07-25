@@ -3,61 +3,33 @@
 $group_size = ARGV[0].split('=').last.to_i
 
 require 'json'
-require 'set'
+require 'tsort'
 
 file = $stdin
-#file = File.open('example1')
+file = File.open(ARGV[1]) if ARGV[1]
 
 all_friends = JSON.load(file.read)
 
-$follows = {}
+
+require 'tsort'
+
+class Hash
+  include TSort
+  alias tsort_each_node each_key
+
+  def tsort_each_child(node, &block)
+    likes = self[node]
+    return unless likes
+    likes.each(&block)
+  end
+end
+
+graph = {}
 
 all_friends.each do |friendship|
-  $follows[friendship.first] ||= Set.new
-  $follows[friendship.first] << friendship.last
+  graph[friendship.first] ||= []
+  graph[friendship.first] << friendship.last
 end
 
-def add_transitive_followers(f1, f2)
-  moar = $follows[f2]
-  return unless moar
-  moar.each do |f3|
-    next if $follows[f1].include?(f3)
-    $follows[f1] << f3
-    add_transitive_followers(f1, f3)
-  end
-end
-
-
-$follows.each do |k, f|
-  f.to_a.each do |f2|
-    add_transitive_followers(k, f2)
-  end
-end
-
-removed = []
-$follows.reject! do |p, followees|
-  # if you don't transitively follow yourself, you obviously can't be a member of any group
-  if !followees.include?(p)
-    removed << p
-    true
-  else
-    false
-  end
-end
-
-$follows.each do |p, followees|
-  followees -= removed
-end
-
-# don't follow me back? not in my group!
-$follows.each do |p, followees|
-  followees.reject! do |f|
-    !$follows[f] || !$follows[f].include?(p)
-  end
-end
-
-#require 'byebug'
-#debugger
-
-groups = $follows.values.uniq.select { |x| x.length >= $group_size }
-puts groups.map(&:to_a).to_json
+groups = graph.strongly_connected_components.select { |x| x.length >= $group_size }
+puts groups.to_json
